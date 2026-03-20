@@ -1,1165 +1,178 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-<link rel="icon" type="image/x-icon" href="./erd.png">
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ERD Designer Pro V2</title>
-
-  <style>
-    :root {
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --ink: #1e293b;
-      --muted: #64748b;
-      --line: #e2e8f0;
-      --accent: #2563eb;
-      --accent-soft: #eff6ff;
-      --erd-line: #0f172a;
-      --radius: 12px;
-    }
-
-    * {
-      box-sizing: border-box
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-    }
-
-    /* Layout */
-    .app-header {
-      background: #fff;
-      border-bottom: 1px solid var(--line);
-      padding: 1rem 1.25rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .main-wrap {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      height: calc(100vh - 80px);
-    }
-
-    /* Sidebar */
-    .sidebar {
-      background: #fff;
-      border-right: 1px solid var(--line);
-      padding: 1.25rem;
-      overflow-y: auto;
-    }
-
-    .tool-section {
-      margin-bottom: 1.5rem;
-    }
-
-    h3 {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      color: var(--muted);
-      letter-spacing: 0.05em;
-      margin-bottom: 1rem;
-    }
-
-    .btn-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .btn {
-      padding: 10px;
-      border: 1px solid var(--line);
-      background: #fff;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.2s;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      user-select: none;
-      white-space: nowrap;
-    }
-
-    .btn:hover {
-      background: var(--bg);
-      border-color: var(--accent);
-    }
-
-    .btn.primary {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-    }
-
-    .btn.active {
-      background: var(--accent-soft);
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .btn.danger {
-      color: #b91c1c;
-    }
-
-    .info-card {
-      background: var(--accent-soft);
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      line-height: 1.5;
-      color: #1e40af;
-      border: 1px solid #dbeafe;
-    }
-
-    /* Stage */
-    .stage-container {
-      position: relative;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    #stage {
-      width: 100%;
-      height: 100%;
-      cursor: crosshair;
-      background: #fff;
-    }
-
-    /* SVG Styling */
-    .node {
-      cursor: grab;
-    }
-
-    .node:active {
-      cursor: grabbing;
-    }
-
-    .entity-rect {
-      stroke: #0f172a;
-      stroke-width: 2;
-      rx: 4;
-    }
-
-    .entity-inner {
-      fill: none;
-      stroke: #0f172a;
-      stroke-width: 1.5;
-      rx: 2;
-    }
-
-    .rel-diamond {
-      fill: #fff;
-      stroke: #0f172a;
-      stroke-width: 2;
-    }
-
-    /* Text Box Styling */
-    .text-rect {
-      rx: 6;
-      transition: 0.2s;
-    }
-
-    .node:hover .text-rect {
-      stroke: #cbd5e1;
-      stroke-dasharray: 4;
-    }
-
-    .selected .text-rect {
-      stroke: var(--accent);
-      stroke-dasharray: 4;
-    }
-
-    .selected .entity-rect,
-    .selected .rel-diamond {
-      stroke: var(--accent);
-      stroke-width: 3;
-    }
-
-    .edge-line {
-      stroke: var(--erd-line);
-      stroke-width: 2;
-      fill: none;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .edge-line:hover {
-      stroke: var(--accent);
-      stroke-width: 3;
-    }
-
-    .node-text {
-      font-size: 14px;
-      font-weight: bold;
-      fill: #0f172a;
-      user-select: none;
-      pointer-events: none;
-    }
-
-    .text-box-label {
-      font-size: 18px;
-      font-weight: 900;
-    }
-
-    /* color controlled by node.textColor */
-
-    /* Float Panel */
-    .panel {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      width: 320px;
-      background: #fff;
-      border-radius: var(--radius);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-      border: 1px solid var(--line);
-      display: none;
-      z-index: 100;
-    }
-
-    .panel-header {
-      padding: 12px;
-      border-bottom: 1px solid var(--line);
-      font-weight: bold;
-      font-size: 0.9rem;
-    }
-
-    .panel-body {
-      padding: 15px;
-    }
-
-    label {
-      display: block;
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
-    select,
-    input {
-      width: 100%;
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid var(--line);
-      margin-bottom: 12px;
-    }
-
-    input[type="range"] {
-      padding: 0;
-    }
-
-    .row2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .footer {
-      width: 100%;
-      background: #ffffff;
-      border-top: 1px solid var(--line);
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      z-index: 120;
-      /* above canvas/panel */
-    }
-
-    .footer-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 10px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      font-size: 12px;
-      color: #64748b;
-    }
-
-    .footer-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 240px;
-    }
-
-    .footer-logo {
-      width: 22px;
-      height: 22px;
-      border-radius: 6px;
-      background: var(--accent);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: 900;
-      font-size: 12px;
-      letter-spacing: .5px;
-      box-shadow: 0 6px 14px rgba(37, 99, 235, .18);
-    }
-
-    .footer-title {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .footer-title b {
-      color: #0f172a;
-    }
-
-    .footer-right {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .footer-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 10px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: #f8fafc;
-      color: #334155;
-    }
-
-    .footer-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 10px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      text-decoration: none;
-      color: var(--accent);
-      background: #ffffff;
-      transition: .2s;
-    }
-
-    .footer-link:hover {
-      background: var(--accent-soft);
-      border-color: var(--accent);
-    }
-
-    .footer-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #22c55e;
-      display: inline-block;
-    }
-
-    @media (max-width: 900px) {
-      .footer-inner {
-        justify-content: center;
-      }
-
-      .footer-left,
-      .footer-right {
-        justify-content: center;
-      }
-    }
-
-
-    @media (max-width: 900px) {
-      .main-wrap {
-        grid-template-columns: 1fr;
-        height: auto;
-      }
-
-      .sidebar {
-        border-right: none;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .stage-container {
-        height: calc(100vh - 260px);
-      }
-    }
-  </style>
-</head>
-
-<body>
-
-  <header class="app-header">
-    <div style="display:flex; align-items:center; gap:10px">
-      <div style="width:30px; height:30px; background:var(--accent); border-radius:6px"></div>
-      <div>
-        <h2 style="margin:0; font-size:1.1rem">ERD Designer Pro V2</h2>
-        <div style="font-size:12px;color:#64748b;margin-top:2px" id="pageIndicator">Page I</div>
-      </div>
-    </div>
-
-    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end">
-      <button class="btn" onclick="exportData()">Export JSON</button>
-      <button class="btn" onclick="savePNG()">Save PNG</button>
-      <button class="btn" onclick="saveJPEG()">Save JPEG</button>
-      <button class="btn" onclick="savePDF()">Save PDF (This Page)</button>
-      <button class="btn" onclick="savePDFAll()">Save PDF (All Pages)</button>
-      <button class="btn danger" onclick="clearAll()">Clear</button>
-    </div>
-  </header>
-
-  <main class="main-wrap">
-    <aside class="sidebar">
-
-      <div class="tool-section">
-        <h3>Pages</h3>
-        <div class="btn-grid">
-          <button class="btn" onclick="prevPage()">◀ Prev</button>
-          <button class="btn" onclick="nextPage()">Next ▶</button>
-          <button class="btn primary" style="grid-column: span 2" onclick="addPage()">＋ Add New Page</button>
-        </div>
-      </div>
-
-      <div class="tool-section">
-        <h3>Entities</h3>
-        <div class="btn-grid">
-          <button class="btn" onclick="addNode('entity', 100, 100, 'Strong', 'strong')">Strong</button>
-          <button class="btn" onclick="addNode('entity', 100, 100, 'Weak', 'weak')">Weak</button>
-          <button class="btn" style="grid-column: span 2"
-            onclick="addNode('entity', 100, 100, 'Assoc', 'associative')">Associative Entity</button>
-        </div>
-      </div>
-
-      <div class="tool-section">
-        <h3>Relationships</h3>
-        <div class="btn-grid">
-          <button class="btn" style="grid-column: span 2"
-            onclick="addNode('rel', 100, 100, 'Has')">Relationship</button>
-        </div>
-      </div>
-
-
-      <div class="tool-section">
-        <h3>Annotations</h3>
-        <div class="btn-grid">
-          <button class="btn" style="grid-column: span 2" onclick="addNode('text', 120, 120, '1')">Add Text Box</button>
-        </div>
-      </div>
-
-      <div class="tool-section">
-        <h3>Mode</h3>
-        <div class="btn-grid">
-          <button id="modeMove" class="btn active" onclick="setMode('move')">Move</button>
-          <button id="modeConnect" class="btn" onclick="setMode('connect')">Connect</button>
-        </div>
-      </div>
-
-      <div class="tool-section">
-        <h3>Presets</h3>
-        <button class="btn" style="width:100%" onclick="quickExamples()">Load Pattern Examples</button>
-      </div>
-
-      <div class="info-card">
-        ✅ Multi-page with Roman labels: <b>Page I, Page II, Page III...</b><br><br>
-        ✅ Text box: change <b>background</b>, <b>border</b>, <b>text color</b>, and <b>size</b>.<br><br>
-        ✅ Export this page or all pages as PDF.
-      </div>
-    </aside>
-
-    <section class="stage-container">
-      <svg id="stage" xmlns="http://www.w3.org/2000/svg">
-        <g id="edges-layer"></g>
-        <g id="nodes-layer"></g>
-      </svg>
-
-      <div id="editPanel" class="panel">
-        <div class="panel-header" id="panelTitle">Properties</div>
-        <div class="panel-body" id="panelBody"></div>
-      </div>
-    </section>
-  </main>
-  <footer class="footer">
-    <div class="footer-inner">
-      <div class="footer-left">
-        <div class="footer-logo" title="Coding 12PM">C12</div>
-        <div class="footer-title">
-          <span>All rights reserved by <b>Coding 12PM</b></span>
-          <span style="color:#cbd5e1">•</span>
-          <span>Creator: <b id="creatorName">Coding 12PM</b></span>
-        </div>
-      </div>
-
-      <div class="footer-right">
-        <span class="footer-pill" title="Version">
-          <span class="footer-dot"></span>
-          <span>v<span id="appVersion">2.0.0</span></span>
-        </span>
-
-        <a class="footer-link" id="githubLink" href="https://github.com/YOUR-USERNAME/YOUR-REPO" target="_blank">
-
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
-            style="margin-right:4px;">
-
-            <path
-              d="M12 .5C5.65.5.5 5.66.5 12.02c0 5.1 3.29 9.42 7.86 10.95.57.1.78-.25.78-.56v-2.17c-3.2.7-3.88-1.38-3.88-1.38-.53-1.34-1.3-1.7-1.3-1.7-1.06-.73.08-.72.08-.72 1.17.08 1.78 1.2 1.78 1.2 1.04 1.8 2.72 1.28 3.38.98.1-.76.4-1.28.72-1.58-2.55-.29-5.23-1.28-5.23-5.68 0-1.25.44-2.27 1.17-3.07-.12-.3-.51-1.5.11-3.13 0 0 .96-.31 3.15 1.17a10.9 10.9 0 0 1 5.73 0c2.18-1.48 3.14-1.17 3.14-1.17.63 1.63.24 2.83.12 3.13.73.8 1.17 1.82 1.17 3.07 0 4.41-2.69 5.38-5.25 5.67.41.36.77 1.07.77 2.16v3.2c0 .31.21.67.79.56A11.53 11.53 0 0 0 23.5 12C23.5 5.66 18.35.5 12 .5z" />
-
-          </svg>
-
-          <span>GitHub</span>
-        </a>
-      </div>
-    </div>
-  </footer>
-
-  <!-- Export libs (PDF vector) -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.0.4/dist/svg2pdf.umd.min.js"></script>
-
-  <script>
-    const stage = document.getElementById('stage');
-    const nodesLayer = document.getElementById('nodes-layer');
-    const edgesLayer = document.getElementById('edges-layer');
-    const editPanel = document.getElementById('editPanel');
-
-    let mode = 'move';
-    let dragNode = null;
-    let connectSource = null;
-
-    const REL_MAPPINGS = ['1:1', '1:M', 'M:N', 'M:1'];
-
-    // -------------------- Pages Model --------------------
-    const pages = [
-      { nodes: [], edges: [] }
-    ];
-    let currentPage = 0;
-
-    function getP() { return pages[currentPage]; }
-    function nodes() { return getP().nodes; }
-    function edges() { return getP().edges; }
-
-    // -------------------- Roman Numerals --------------------
-    function toRoman(num) {
-      const map = [
-        [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-        [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-        [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']
-      ];
-      let n = Math.max(1, Math.floor(num));
-      let out = '';
-      for (const [v, s] of map) {
-        while (n >= v) { out += s; n -= v; }
-      }
-      return out;
-    }
-
-    function pageLabel(idx) { // idx is 0-based
-      return `Page ${toRoman(idx + 1)}`;
-    }
-
-    function updatePageIndicator() {
-      document.getElementById('pageIndicator').textContent = pageLabel(currentPage);
-    }
-
-    // -------------------- Page Controls --------------------
-    function addPage() {
-      pages.push({ nodes: [], edges: [] });
-      currentPage = pages.length - 1;
-      setViewBox();
-      render();
-    }
-
-    function prevPage() {
-      if (currentPage <= 0) return;
-      currentPage--;
-      setViewBox();
-      render();
-    }
-
-    function nextPage() {
-      if (currentPage >= pages.length - 1) return;
-      currentPage++;
-      setViewBox();
-      render();
-    }
-
-    // -------------------- Core --------------------
-    function setMode(m) {
-      mode = m;
-      document.getElementById('modeMove').classList.toggle('active', m === 'move');
-      document.getElementById('modeConnect').classList.toggle('active', m === 'connect');
-      connectSource = null;
-      render();
-    }
-
-    function addNode(type, x = 100, y = 100, label = '', variant = 'strong') {
-      const node = {
-        id: Date.now() + Math.random(),
-        type,
-        variant,
-        x, y,
-        w: type === 'entity' ? 140 : (type === 'text' ? 70 : 100),
-        h: type === 'entity' ? 60 : (type === 'text' ? 46 : 70),
-        label: label || (type === 'entity' ? 'Entity' : (type === 'text' ? '1' : 'Has')),
-        mapping: '1:1',
-
-        rotation: 0,
-        color: (type === 'entity')
-          ? (variant === 'weak' ? '#fff7ed' : (variant === 'associative' ? '#ecfeff' : '#eff6ff'))
-          : '#ffffff',
-
-        // Text box styling
-        textColor: (type === 'text') ? '#ea580c' : '#0f172a',
-        boxBg: (type === 'text') ? '#ffffff' : 'transparent',
-        boxBorder: (type === 'text') ? '#cbd5e1' : 'transparent',
-        boxBorderWidth: (type === 'text') ? 2 : 0
-      };
-      nodes().push(node);
-      render();
-      return node;
-    }
-
-    function getCircleCenter(node, targetPoint) {
-      const cx = node.x + node.w / 2;
-      const cy = node.y + node.h / 2;
-      const r = 6;
-
-      const dx = targetPoint.x - cx;
-      const dy = targetPoint.y - cy;
-
-      if (Math.abs(dx) > Math.abs(dy)) {
-        return { x: cx + Math.sign(dx) * (node.w / 2 + r), y: cy };
-      } else {
-        return { x: cx, y: cy + Math.sign(dy) * (node.h / 2 + r) };
-      }
-    }
-
-    function render() {
-      nodesLayer.innerHTML = '';
-      edgesLayer.innerHTML = '';
-
-      // Render Edges
-      edges().forEach(edge => {
-        const n1 = nodes().find(n => n.id === edge.from);
-        const n2 = nodes().find(n => n.id === edge.to);
-        if (!n1 || !n2) return;
-
-        const p1 = { x: n1.x + n1.w / 2, y: n1.y + n1.h / 2 };
-        const p2 = { x: n2.x + n2.w / 2, y: n2.y + n2.h / 2 };
-
-        const midX = p1.x + (p2.x - p1.x) / 2;
-        const pathData = `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
-
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", pathData);
-        path.setAttribute("class", "edge-line");
-        path.onclick = (e) => { e.stopPropagation(); showEdgeEdit(edge); };
-        edgesLayer.appendChild(path);
-
-        const target1 = { x: midX, y: p1.y };
-        if (Math.abs(midX - p1.x) < 0.1) target1.y = p2.y;
-
-        const target2 = { x: midX, y: p2.y };
-        if (Math.abs(midX - p2.x) < 0.1) target2.y = p1.y;
-
-        if (edge.styleStart === 'optional') {
-          const c1 = getCircleCenter(n1, target1);
-          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          circle.setAttribute("cx", c1.x); circle.setAttribute("cy", c1.y);
-          circle.setAttribute("r", 6);
-          circle.setAttribute("fill", "#fff");
-          circle.setAttribute("stroke", "var(--erd-line)");
-          circle.setAttribute("stroke-width", "2");
-          edgesLayer.appendChild(circle);
-        }
-
-        if (edge.styleEnd === 'optional') {
-          const c2 = getCircleCenter(n2, target2);
-          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-          circle.setAttribute("cx", c2.x); circle.setAttribute("cy", c2.y);
-          circle.setAttribute("r", 6);
-          circle.setAttribute("fill", "#fff");
-          circle.setAttribute("stroke", "var(--erd-line)");
-          circle.setAttribute("stroke-width", "2");
-          edgesLayer.appendChild(circle);
-        }
-      });
-
-      // Render Nodes
-      nodes().forEach(node => {
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        const cx = node.w / 2;
-        const cy = node.h / 2;
-        g.setAttribute("transform", `translate(${node.x},${node.y}) rotate(${node.rotation || 0} ${cx} ${cy})`);
-        g.setAttribute("class", `node ${connectSource === node.id ? 'selected' : ''}`);
-
-        if (node.type === 'entity') {
-          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-          rect.setAttribute("width", node.w);
-          rect.setAttribute("height", node.h);
-          rect.setAttribute("rx", "4");
-          rect.setAttribute("fill", node.color || "#ffffff");
-          rect.setAttribute("stroke", "#0f172a");
-          rect.setAttribute("stroke-width", "2");
-          rect.setAttribute("class", "entity-rect");
-          g.appendChild(rect);
-
-          if (node.variant === 'weak') {
-            const inner = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            inner.setAttribute("x", 4); inner.setAttribute("y", 4);
-            inner.setAttribute("width", node.w - 8); inner.setAttribute("height", node.h - 8);
-            inner.setAttribute("class", "entity-inner");
-            g.appendChild(inner);
-          } else if (node.variant === 'associative') {
-            const diamond = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-            const dpts = `${node.w / 2},2 ${node.w - 2},${node.h / 2} ${node.w / 2},${node.h - 2} 2,${node.h / 2}`;
-            diamond.setAttribute("points", dpts);
-            diamond.setAttribute("class", "entity-inner");
-            g.appendChild(diamond);
-          }
-
-        } else if (node.type === 'text') {
-          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-          rect.setAttribute("width", node.w);
-          rect.setAttribute("height", node.h);
-          rect.setAttribute("class", "text-rect");
-          rect.setAttribute("fill", node.boxBg || "#ffffff");
-          rect.setAttribute("stroke", node.boxBorder || "#cbd5e1");
-          rect.setAttribute("stroke-width", String(node.boxBorderWidth ?? 2));
-          g.appendChild(rect);
-
-        } else {
-          const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-          const pts = `${node.w / 2},0 ${node.w},${node.h / 2} ${node.w / 2},${node.h} 0,${node.h / 2}`;
-          poly.setAttribute("points", pts);
-          poly.setAttribute("class", "rel-diamond");
-          g.appendChild(poly);
-        }
-
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.textContent = node.label;
-        text.setAttribute("x", node.w / 2);
-        text.setAttribute("y", node.h / 2 + 6);
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("class", node.type === 'text' ? 'node-text text-box-label' : 'node-text');
-        text.setAttribute("fill", node.type === 'text' ? (node.textColor || '#ea580c') : '#0f172a');
-        g.appendChild(text);
-
-        g.onmousedown = (e) => {
-          if (mode === 'move') dragNode = { node, ox: e.offsetX - node.x, oy: e.offsetY - node.y };
-          else handleConnect(node.id);
-        };
-        g.onclick = (e) => { e.stopPropagation(); showNodeEdit(node); };
-
-        nodesLayer.appendChild(g);
-      });
-
-      updatePageIndicator();
-    }
-
-    function handleConnect(id) {
-      if (!connectSource) {
-        connectSource = id;
-        render();
-      } else if (connectSource !== id) {
-        const n1 = nodes().find(n => n.id === connectSource);
-        const n2 = nodes().find(n => n.id === id);
-
-        if (n1.type === 'text' || n2.type === 'text') {
-          connectSource = null; render(); return;
-        }
-
-        if (n1.type === 'entity' && n2.type === 'entity') {
-          const midX = (n1.x + n2.x) / 2;
-          const midY = (n1.y + n2.y) / 2;
-          const rel = addNode('rel', midX, midY, 'Has');
-          edges().push({ from: n1.id, to: rel.id, styleStart: 'mandatory', styleEnd: 'mandatory' });
-          edges().push({ from: rel.id, to: n2.id, styleStart: 'mandatory', styleEnd: 'mandatory' });
-        } else {
-          edges().push({ from: connectSource, to: id, styleStart: 'mandatory', styleEnd: 'mandatory' });
-        }
-        connectSource = null;
-        render();
-      }
-    }
-
-    stage.onmousemove = (e) => {
-      if (dragNode) {
-        dragNode.node.x = e.offsetX - dragNode.ox;
-        dragNode.node.y = e.offsetY - dragNode.oy;
-        render();
-      }
-    };
-    stage.onmouseup = () => dragNode = null;
-
-    function showEdgeEdit(edge) {
-      const body = document.getElementById('panelBody');
-      body.innerHTML = `
-      <label>Start Line Style</label>
-      <select onchange="edgeVal(this.value, 'styleStart')">
-        <option value="mandatory" ${edge.styleStart === 'mandatory' ? 'selected' : ''}>Standard Line</option>
-        <option value="optional" ${edge.styleStart === 'optional' ? 'selected' : ''}>Optional Line (Circle)</option>
-      </select>
-
-      <label>End Line Style</label>
-      <select onchange="edgeVal(this.value, 'styleEnd')">
-         <option value="mandatory" ${edge.styleEnd === 'mandatory' ? 'selected' : ''}>Standard Line</option>
-         <option value="optional" ${edge.styleEnd === 'optional' ? 'selected' : ''}>Optional Line (Circle)</option>
-      </select>
-
-      <button class="btn danger" style="width:100%; margin-top:10px" onclick="deleteEdge()">Delete Link</button>
-    `;
-      window.edgeVal = (v, prop) => { edge[prop] = v; render(); };
-      window.deleteEdge = () => { getP().edges = edges().filter(e => e !== edge); editPanel.style.display = 'none'; render(); };
-      editPanel.style.display = 'block';
-    }
-
-    function showNodeEdit(node) {
-      const body = document.getElementById('panelBody');
-
-      let html = `
-      <label>${node.type === 'text' ? 'Annotation Text' : 'Display Name'}</label>
-      <input type="text" value="${escapeHtml(node.label)}" oninput="nodeVal(this.value, 'label')">
-    `;
-
-      // TEXT BOX: color + size controls
-      if (node.type === 'text') {
-        html += `
-        <div class="row2">
-          <div>
-            <label>Text Color</label>
-            <input type="color" value="${node.textColor || '#ea580c'}" oninput="nodeVal(this.value, 'textColor')">
+  <head>
+    <link rel="icon" type="image/x-icon" href="./icon/erd.png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ERD Designer</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+
+  <body>
+    <header class="app-header">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <div
+          style="
+            width: 30px;
+            height: 30px;
+            background: var(--accent);
+            border-radius: 6px;
+          "
+        ></div>
+        <div>
+          <h2 style="margin: 0; font-size: 1.1rem">ERD Designer(Chen Notation)</h2>
+          <div
+            style="font-size: 12px; color: #64748b; margin-top: 2px"
+            id="pageIndicator"
+          >
+            Page I
           </div>
-          <div>
-            <label>Box Background</label>
-            <input type="color" value="${node.boxBg || '#ffffff'}" oninput="nodeVal(this.value, 'boxBg')">
+        </div>
+      </div>
+
+      <div
+        style="
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        "
+      >
+        <button class="btn" id="btnExportJson">Export JSON</button>
+        <button class="btn" id="btnSavePng">Save PNG</button>
+        <button class="btn" id="btnSaveJpeg">Save JPEG</button>
+        <button class="btn" id="btnSavePdf">Save PDF (This Page)</button>
+        <button class="btn" id="btnSavePdfAll">Save PDF (All Pages)</button>
+        <button class="btn danger" id="btnClear">Clear</button>
+      </div>
+    </header>
+
+    <main class="main-wrap">
+      <aside class="sidebar">
+        <div class="tool-section">
+          <h3>Pages</h3>
+          <div class="btn-grid">
+            <button class="btn" id="btnPrevPage">◀ Prev</button>
+            <button class="btn" id="btnNextPage">Next ▶</button>
+            <button
+              class="btn primary"
+              style="grid-column: span 2"
+              id="btnAddPage"
+            >
+              ＋ Add New Page
+            </button>
           </div>
         </div>
 
-        <div class="row2">
-          <div>
-            <label>Border Color</label>
-            <input type="color" value="${node.boxBorder || '#cbd5e1'}" oninput="nodeVal(this.value, 'boxBorder')">
+        <div class="tool-section">
+          <h3>Entities</h3>
+          <div class="btn-grid">
+            <button class="btn" id="btnAddStrong">Strong</button>
+            <button class="btn" id="btnAddWeak">Weak</button>
+            <button class="btn" style="grid-column: span 2" id="btnAddAssoc">
+              Associative Entity
+            </button>
           </div>
-          <div>
-            <label>Border Width</label>
-            <input type="number" min="0" max="10" value="${node.boxBorderWidth ?? 2}" oninput="nodeVal(Number(this.value), 'boxBorderWidth')">
+        </div>
+
+        <div class="tool-section">
+          <h3>Relationships</h3>
+          <div class="btn-grid">
+            <button class="btn" style="grid-column: span 2" id="btnAddRel">
+              Relationship
+            </button>
           </div>
         </div>
 
-        <label>Text Box Size Preset</label>
-        <select onchange="applyTextSizePreset(this.value)">
-          <option value="">Custom</option>
-          <option value="S">Small</option>
-          <option value="M" selected>Medium</option>
-          <option value="L">Large</option>
-        </select>
-
-        <div class="row2">
-          <div>
-            <label>Width</label>
-            <input type="number" min="30" max="600" value="${node.w}" oninput="nodeVal(Number(this.value), 'w')">
-          </div>
-          <div>
-            <label>Height</label>
-            <input type="number" min="20" max="300" value="${node.h}" oninput="nodeVal(Number(this.value), 'h')">
+        <div class="tool-section">
+          <h3>Annotations</h3>
+          <div class="btn-grid">
+            <button class="btn" style="grid-column: span 2" id="btnAddText">
+              Add Text Box
+            </button>
           </div>
         </div>
-      `;
-        window.applyTextSizePreset = (v) => {
-          if (v === 'S') { node.w = 50; node.h = 36; }
-          if (v === 'M') { node.w = 70; node.h = 46; }
-          if (v === 'L') { node.w = 110; node.h = 56; }
-          render();
-        };
-      }
 
-      if (node.type === 'entity') {
-        html += `
-        <button class="btn" style="width:100%; margin:-6px 0 12px" onclick="renameToEntity()">Rename to "Entity"</button>
+        <div class="tool-section">
+          <h3>Mode</h3>
+          <div class="btn-grid">
+            <button id="modeMove" class="btn active">Move</button>
+            <button id="modeConnect" class="btn">Connect</button>
+          </div>
+        </div>
 
-        <label>Entity Background Color</label>
-        <input type="color" value="${node.color || '#ffffff'}" oninput="nodeVal(this.value, 'color')">
-      `;
-      }
+        <div class="tool-section">
+          <h3>Presets</h3>
+          <button class="btn" style="width: 100%" id="btnQuickExamples">
+            Load Pattern Examples
+          </button>
+        </div>
 
-      if (node.type === 'entity' || node.type === 'rel') {
-        const rot = Number(node.rotation || 0);
-        html += `
-        <label>Rotation (0–360)</label>
-        <input type="range" min="0" max="360" value="${rot}"
-          oninput="nodeVal(Number(this.value), 'rotation'); document.getElementById('rotVal').value=this.value;">
-        <input id="rotVal" type="number" min="0" max="360" value="${rot}"
-          oninput="nodeVal(Number(this.value), 'rotation')">
-      `;
-      }
+        <div class="info-card">
+          ✅ Multi-page with Roman labels: <b>Page I, Page II, Page III...</b
+          ><br /><br />
+          ✅ Text box: change <b>background</b>, <b>border</b>,
+          <b>text color</b>, and <b>size</b>.<br /><br />
+          ✅ Export this page or all pages as PDF.
+        </div>
+      </aside>
 
-      if (node.type === 'entity') {
-        html += `
-        <label>Entity Type</label>
-        <select onchange="nodeVal(this.value, 'variant')">
-          <option value="strong" ${node.variant === 'strong' ? 'selected' : ''}>Strong</option>
-          <option value="weak" ${node.variant === 'weak' ? 'selected' : ''}>Weak</option>
-          <option value="associative" ${node.variant === 'associative' ? 'selected' : ''}>Associative</option>
-        </select>
-      `;
-      } else if (node.type === 'rel') {
-        html += `
-        <label>Relationship Type</label>
-        <select onchange="nodeVal(this.value, 'mapping')">
-          ${REL_MAPPINGS.map(m => `<option value="${m}" ${node.mapping === m ? 'selected' : ''}>${m}</option>`).join('')}
-        </select>
-      `;
-      }
+      <section class="stage-container">
+        <svg id="stage" xmlns="http://www.w3.org/2000/svg">
+          <g id="edges-layer"></g>
+          <g id="nodes-layer"></g>
+        </svg>
 
-      html += `<button class="btn danger" style="width:100%; margin-top:10px" onclick="deleteNode()">Delete Shape</button>`;
+        <div id="editPanel" class="panel">
+          <div class="panel-header" id="panelTitle">Properties</div>
+          <div class="panel-body" id="panelBody"></div>
+        </div>
+      </section>
+    </main>
 
-      body.innerHTML = html;
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-left">
+          <div class="footer-logo" title="Coding 12PM">C12</div>
+          <div class="footer-title">
+            <span>All rights reserved by <b>Coding 12PM</b></span>
+            <span style="color: #cbd5e1">•</span>
+            <span>Creator: <b id="creatorName">Coding 12PM</b></span>
+          </div>
+        </div>
 
-      window.nodeVal = (v, prop) => { node[prop] = v; render(); };
-      window.renameToEntity = () => { node.label = "Entity"; render(); };
+        <div class="footer-right">
+          <span class="footer-pill" title="Version">
+            <span class="footer-dot"></span>
+            <span>v<span id="appVersion">2.0.0</span></span>
+          </span>
 
-      window.deleteNode = () => {
-        getP().nodes = nodes().filter(n => n !== node);
-        getP().edges = edges().filter(e => e.from !== node.id && e.to !== node.id);
-        editPanel.style.display = 'none';
-        render();
-      };
+          <a
+            class="footer-link"
+            id="githubLink"
+            href="https://github.com/YOUR-USERNAME/YOUR-REPO"
+            target="_blank"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              style="margin-right: 4px"
+            >
+              <path
+                d="M12 .5C5.65.5.5 5.66.5 12.02c0 5.1 3.29 9.42 7.86 10.95.57.1.78-.25.78-.56v-2.17c-3.2.7-3.88-1.38-3.88-1.38-.53-1.34-1.3-1.7-1.3-1.7-1.06-.73.08-.72.08-.72 1.17.08 1.78 1.2 1.78 1.2 1.04 1.8 2.72 1.28 3.38.98.1-.76.4-1.28.72-1.58-2.55-.29-5.23-1.28-5.23-5.68 0-1.25.44-2.27 1.17-3.07-.12-.3-.51-1.5.11-3.13 0 0 .96-.31 3.15 1.17a10.9 10.9 0 0 1 5.73 0c2.18-1.48 3.14-1.17 3.14-1.17.63 1.63.24 2.83.12 3.13.73.8 1.17 1.82 1.17 3.07 0 4.41-2.69 5.38-5.25 5.67.41.36.77 1.07.77 2.16v3.2c0 .31.21.67.79.56A11.53 11.53 0 0 0 23.5 12C23.5 5.66 18.35.5 12 .5z"
+              />
+            </svg>
+            <span>GitHub</span>
+          </a>
+        </div>
+      </div>
+    </footer>
 
-      editPanel.style.display = 'block';
-    }
-
-    function quickExamples() {
-      clearAll();
-
-      const e1 = addNode('entity', 120, 120, 'User', 'strong');
-      const r1 = addNode('rel', 360, 115, 'Has');
-      const e2 = addNode('entity', 560, 120, 'Profile', 'weak');
-
-      edges().push({ from: e1.id, to: r1.id, styleStart: 'mandatory', styleEnd: 'mandatory' });
-      edges().push({ from: r1.id, to: e2.id, styleStart: 'mandatory', styleEnd: 'optional' });
-
-      const t1 = addNode('text', 260, 95, '1');
-      const t2 = addNode('text', 440, 95, '1');
-      t1.boxBg = '#fff7ed'; t2.boxBg = '#fff7ed';
-
-      render();
-    }
-
-    function clearAll() {
-      getP().nodes = [];
-      getP().edges = [];
-      render();
-      editPanel.style.display = 'none';
-    }
-
-    function exportData() {
-      const payload = {
-        pages: pages.map((p, i) => ({
-          page: pageLabel(i),
-          nodes: p.nodes,
-          edges: p.edges
-        }))
-      };
-      console.log(JSON.stringify(payload, null, 2));
-      alert("JSON (all pages) logged to console.");
-    }
-
-    window.onclick = (e) => { if (e.target === stage) editPanel.style.display = 'none'; };
-
-    // Screen-based viewBox (same for every page)
-    function setViewBox() {
-      const w = Math.max(600, window.innerWidth - 320);
-      const h = Math.max(600, window.innerHeight - 80);
-      stage.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    }
-    window.addEventListener('resize', () => { setViewBox(); render(); });
-
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", "&#039;");
-    }
-
-    // ===================== EXPORT: PNG / JPEG / PDF =====================
-    function downloadBlob(blob, filename) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    function buildExportSvgInlineStyles(svgEl) {
-      const cssText = Array.from(document.querySelectorAll('style'))
-        .map(s => s.textContent || '')
-        .join('\n');
-      const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
-      styleEl.textContent = cssText;
-      svgEl.insertBefore(styleEl, svgEl.firstChild);
-    }
-
-    function cloneCurrentStageForExport() {
-      const svg = document.getElementById('stage');
-      const clone = svg.cloneNode(true);
-      const vb = svg.getAttribute('viewBox');
-      if (vb) clone.setAttribute('viewBox', vb);
-
-      const [x, y, w, h] = vb ? vb.split(' ').map(Number) : [0, 0, svg.clientWidth, svg.clientHeight];
-
-      const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      bg.setAttribute("x", "0"); bg.setAttribute("y", "0");
-      bg.setAttribute("width", w || svg.clientWidth);
-      bg.setAttribute("height", h || svg.clientHeight);
-      bg.setAttribute("fill", "#ffffff");
-      clone.insertBefore(bg, clone.firstChild);
-
-      buildExportSvgInlineStyles(clone);
-
-      clone.setAttribute('width', w || svg.clientWidth);
-      clone.setAttribute('height', h || svg.clientHeight);
-
-      return { clone, w: (w || svg.clientWidth), h: (h || svg.clientHeight) };
-    }
-
-    async function svgToCanvas(scale = 2) {
-      const { clone, w, h } = cloneCurrentStageForExport();
-      const xml = new XMLSerializer().serializeToString(clone);
-      const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
-
-      const img = new Image();
-      img.decoding = "async";
-      img.src = url;
-
-      await new Promise((res, rej) => {
-        img.onload = () => res();
-        img.onerror = (e) => rej(e);
-      });
-
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(w * scale);
-      canvas.height = Math.round(h * scale);
-
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      URL.revokeObjectURL(url);
-      return canvas;
-    }
-
-    function safeName(s) {
-      return String(s).replace(/\s+/g, '_').replace(/[^\w\-]/g, '');
-    }
-
-    async function savePNG() {
-      const canvas = await svgToCanvas(2);
-      const label = safeName(pageLabel(currentPage));
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        downloadBlob(blob, `erd-${label}.png`);
-      }, "image/png");
-    }
-
-    async function saveJPEG() {
-      const canvas = await svgToCanvas(2);
-      const label = safeName(pageLabel(currentPage));
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        downloadBlob(blob, `erd-${label}.jpg`);
-      }, "image/jpeg", 0.92);
-    }
-
-    async function savePDF() {
-      const svg = document.getElementById('stage');
-      const vb = svg.getAttribute('viewBox');
-      const [x, y, w, h] = vb ? vb.split(' ').map(Number) : [0, 0, svg.clientWidth, svg.clientHeight];
-
-      const { clone } = cloneCurrentStageForExport();
-      const xml = new XMLSerializer().serializeToString(clone);
-      const svgEl = new DOMParser().parseFromString(xml, "image/svg+xml").documentElement;
-
-      const { jsPDF } = window.jspdf;
-      const orientation = (w >= h) ? "l" : "p";
-      const pdf = new jsPDF({ orientation, unit: "pt", format: [w, h] });
-
-      await window.svg2pdf(svgEl, pdf, { xOffset: 0, yOffset: 0, scale: 1 });
-
-      const label = safeName(pageLabel(currentPage));
-      pdf.save(`erd-${label}.pdf`);
-    }
-
-    async function savePDFAll() {
-      const oldIndex = currentPage;
-      let pdf = null;
-
-      for (let i = 0; i < pages.length; i++) {
-        currentPage = i;
-        setViewBox();
-        render();
-
-        const svg = document.getElementById('stage');
-        const vb = svg.getAttribute('viewBox');
-        const [x, y, w, h] = vb ? vb.split(' ').map(Number) : [0, 0, svg.clientWidth, svg.clientHeight];
-
-        const { clone } = cloneCurrentStageForExport();
-        const xml = new XMLSerializer().serializeToString(clone);
-        const svgEl = new DOMParser().parseFromString(xml, "image/svg+xml").documentElement;
-
-        const { jsPDF } = window.jspdf;
-
-        if (!pdf) {
-          pdf = new jsPDF({ orientation: (w >= h) ? "l" : "p", unit: "pt", format: [w, h] });
-        } else {
-          pdf.addPage([w, h], (w >= h) ? "l" : "p");
-          pdf.setPage(i + 1);
-        }
-
-        await window.svg2pdf(svgEl, pdf, { xOffset: 0, yOffset: 0, scale: 1 });
-      }
-
-      currentPage = oldIndex;
-      setViewBox();
-      render();
-
-      if (pdf) pdf.save(`erd-all-pages.pdf`);
-    }
-    // ===================== END EXPORT =====================
-
-    // ===== Footer Config (easy edit) =====
-    const FOOTER_CONFIG = {
-      version: "1.1.2",
-      creator: "Coding 12PM",
-      github: "https://github.com/YOUR-USERNAME/YOUR-REPO"
-    };
-
-    document.getElementById("appVersion").textContent = FOOTER_CONFIG.version;
-    document.getElementById("creatorName").textContent = FOOTER_CONFIG.creator;
-    document.getElementById("githubLink").href = FOOTER_CONFIG.github;
-
-    // Init
-    setViewBox();
-    render();
-  </script>
-</body>
-
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.0.4/dist/svg2pdf.umd.min.js"></script>
+    <script type="module" src="./js/app.js"></script>
+  </body>
 </html>
