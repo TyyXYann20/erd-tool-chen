@@ -5,6 +5,8 @@ import {
   nextPage,
   addNode,
   setEditorMode,
+  setCurrentPageSize,
+  growCurrentPage,
   quickExamples,
   clearAll,
   exportData,
@@ -40,6 +42,17 @@ document.getElementById("btnSavePng").onclick = savePNG;
 document.getElementById("btnSaveJpeg").onclick = saveJPEG;
 document.getElementById("btnSavePdf").onclick = savePDF;
 document.getElementById("btnSavePdfAll").onclick = savePDFAll;
+
+function applyCurrentPageSize() {
+  const width = Number(document.getElementById("pageWidthInput").value);
+  const height = Number(document.getElementById("pageHeightInput").value);
+  setCurrentPageSize(width, height);
+}
+
+document.getElementById("btnApplyPageSize").onclick = applyCurrentPageSize;
+document.getElementById("btnGrowPage").onclick = growCurrentPage;
+document.getElementById("pageWidthInput").onchange = applyCurrentPageSize;
+document.getElementById("pageHeightInput").onchange = applyCurrentPageSize;
 
 document.getElementById("appVersion").textContent = FOOTER_CONFIG.version;
 document.getElementById("creatorName").textContent = FOOTER_CONFIG.creator;

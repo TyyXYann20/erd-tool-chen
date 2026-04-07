@@ -93,6 +93,38 @@ function safeName(s) {
     .replace(/[^\w\-]/g, "");
 }
 
+function getStageSize() {
+  const vb = stage.getAttribute("viewBox");
+  const [, , w, h] = vb
+    ? vb.split(" ").map(Number)
+    : [0, 0, stage.clientWidth, stage.clientHeight];
+
+  return {
+    width: w || stage.clientWidth,
+    height: h || stage.clientHeight,
+  };
+}
+
+function getPdfLib() {
+  const jsPdfRoot = window.jspdf;
+  if (!jsPdfRoot?.jsPDF) {
+    throw new Error("jsPDF did not load.");
+  }
+  return jsPdfRoot.jsPDF;
+}
+
+function waitForNextPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
+async function addCanvasPageToPdf(pdf, width, height) {
+  const canvas = await svgToCanvas(2);
+  const imageData = canvas.toDataURL("image/png");
+  pdf.addImage(imageData, "PNG", 0, 0, width, height, undefined, "FAST");
+}
+
 export async function savePNG() {
   const canvas = await svgToCanvas(2);
   const label = safeName(pageLabel(appState.currentPage));
@@ -116,23 +148,27 @@ export async function saveJPEG() {
 }
 
 export async function savePDF() {
-  const vb = stage.getAttribute("viewBox");
-  const [x, y, w, h] = vb
-    ? vb.split(" ").map(Number)
-    : [0, 0, stage.clientWidth, stage.clientHeight];
+  const { width, height } = getStageSize();
+  const jsPDF = getPdfLib();
+  const orientation = width >= height ? "l" : "p";
+  const pdf = new jsPDF({
+    orientation,
+    unit: "pt",
+    format: [width, height],
+  });
 
-  const { clone } = cloneCurrentStageForExport();
-  const xml = new XMLSerializer().serializeToString(clone);
-  const svgEl = new DOMParser().parseFromString(
-    xml,
-    "image/svg+xml",
-  ).documentElement;
+  if (typeof window.svg2pdf === "function") {
+    const { clone } = cloneCurrentStageForExport();
+    const xml = new XMLSerializer().serializeToString(clone);
+    const svgEl = new DOMParser().parseFromString(
+      xml,
+      "image/svg+xml",
+    ).documentElement;
 
-  const { jsPDF } = window.jspdf;
-  const orientation = w >= h ? "l" : "p";
-  const pdf = new jsPDF({ orientation, unit: "pt", format: [w, h] });
-
-  await window.svg2pdf(svgEl, pdf, { xOffset: 0, yOffset: 0, scale: 1 });
+    await window.svg2pdf(svgEl, pdf, { xOffset: 0, yOffset: 0, scale: 1 });
+  } else {
+    await addCanvasPageToPdf(pdf, width, height);
+  }
 
   const label = safeName(pageLabel(appState.currentPage));
   pdf.save(`erd-${label}.pdf`);
@@ -142,42 +178,36 @@ export async function savePDFAll() {
   const oldIndex = appState.currentPage;
   let pdf = null;
 
-  for (let i = 0; i < appState.pages.length; i++) {
-    appState.currentPage = i;
+  try {
+    const jsPDF = getPdfLib();
+
+    for (let i = 0; i < appState.pages.length; i++) {
+      appState.currentPage = i;
+      setViewBox();
+      render();
+      await waitForNextPaint();
+
+      const { width, height } = getStageSize();
+      const orientation = width >= height ? "l" : "p";
+
+      if (!pdf) {
+        pdf = new jsPDF({
+          orientation,
+          unit: "pt",
+          format: [width, height],
+        });
+      } else {
+        pdf.addPage([width, height], orientation);
+        pdf.setPage(i + 1);
+      }
+
+      await addCanvasPageToPdf(pdf, width, height);
+    }
+  } finally {
+    appState.currentPage = oldIndex;
     setViewBox();
     render();
-
-    const vb = stage.getAttribute("viewBox");
-    const [x, y, w, h] = vb
-      ? vb.split(" ").map(Number)
-      : [0, 0, stage.clientWidth, stage.clientHeight];
-
-    const { clone } = cloneCurrentStageForExport();
-    const xml = new XMLSerializer().serializeToString(clone);
-    const svgEl = new DOMParser().parseFromString(
-      xml,
-      "image/svg+xml",
-    ).documentElement;
-
-    const { jsPDF } = window.jspdf;
-
-    if (!pdf) {
-      pdf = new jsPDF({
-        orientation: w >= h ? "l" : "p",
-        unit: "pt",
-        format: [w, h],
-      });
-    } else {
-      pdf.addPage([w, h], w >= h ? "l" : "p");
-      pdf.setPage(i + 1);
-    }
-
-    await window.svg2pdf(svgEl, pdf, { xOffset: 0, yOffset: 0, scale: 1 });
   }
-
-  appState.currentPage = oldIndex;
-  setViewBox();
-  render();
 
   if (pdf) pdf.save("erd-all-pages.pdf");
 }

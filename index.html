@@ -27,6 +27,12 @@
           >
             Page I
           </div>
+          <div
+            style="font-size: 12px; color: #94a3b8; margin-top: 2px"
+            id="pageSizeIndicator"
+          >
+            Canvas 1400 x 900
+          </div>
         </div>
       </div>
 
@@ -52,15 +58,33 @@
         <div class="tool-section">
           <h3>Pages</h3>
           <div class="btn-grid">
-            <button class="btn" id="btnPrevPage">◀ Prev</button>
-            <button class="btn" id="btnNextPage">Next ▶</button>
+            <button class="btn" id="btnPrevPage">Prev</button>
+            <button class="btn" id="btnNextPage">Next</button>
             <button
               class="btn primary"
               style="grid-column: span 2"
               id="btnAddPage"
             >
-              ＋ Add New Page
+              Add New Page
             </button>
+          </div>
+        </div>
+
+        <div class="tool-section">
+          <h3>Canvas Size</h3>
+          <div class="row2">
+            <div>
+              <label for="pageWidthInput">Width</label>
+              <input type="number" min="800" max="6000" id="pageWidthInput" value="1400">
+            </div>
+            <div>
+              <label for="pageHeightInput">Height</label>
+              <input type="number" min="600" max="6000" id="pageHeightInput" value="900">
+            </div>
+          </div>
+          <div class="btn-grid">
+            <button class="btn primary" id="btnApplyPageSize">Apply Size</button>
+            <button class="btn" id="btnGrowPage">Grow +20%</button>
           </div>
         </div>
 

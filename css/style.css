@@ -116,15 +116,20 @@ h3 {
 /* Stage */
 .stage-container {
   position: relative;
-  overflow: hidden;
-  background: #fff;
+  overflow: auto;
+  padding: 24px;
+  background:
+    linear-gradient(90deg, rgba(226, 232, 240, 0.45) 1px, transparent 1px),
+    linear-gradient(rgba(226, 232, 240, 0.45) 1px, transparent 1px),
+    #f8fafc;
+  background-size: 24px 24px, 24px 24px, auto;
 }
 
 #stage {
-  width: 100%;
-  height: 100%;
+  display: block;
   cursor: crosshair;
   background: #fff;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
 }
 
 /* SVG Styling */
@@ -380,5 +385,6 @@ input[type="range"] {
 
   .stage-container {
     height: calc(100vh - 260px);
+    padding: 16px;
   }
 }

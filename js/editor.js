@@ -6,6 +6,8 @@ import {
   panelBody,
   REL_MAPPINGS,
   appState,
+  PAGE_LIMITS,
+  createPage,
   getNodes,
   getEdges,
   getPage,
@@ -49,12 +51,229 @@ export function updatePageIndicator() {
   document.getElementById("pageIndicator").textContent = pageLabel(
     appState.currentPage,
   );
+  const page = getPage();
+  document.getElementById("pageSizeIndicator").textContent =
+    `Canvas ${page.width} x ${page.height}`;
+}
+
+function clampDimension(value, fallback, min, max) {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(nextValue)));
+}
+
+function getPageDimensions(page = getPage()) {
+  return {
+    width: clampDimension(
+      page.width,
+      1400,
+      PAGE_LIMITS.minWidth,
+      PAGE_LIMITS.maxWidth,
+    ),
+    height: clampDimension(
+      page.height,
+      900,
+      PAGE_LIMITS.minHeight,
+      PAGE_LIMITS.maxHeight,
+    ),
+  };
+}
+
+function getNodeCenter(node) {
+  return {
+    x: node.x + node.w / 2,
+    y: node.y + node.h / 2,
+  };
+}
+
+function setNodeCenter(node, x, y) {
+  node.x = x - node.w / 2;
+  node.y = y - node.h / 2;
+}
+
+function clampNodeToPage(node, page = getPage()) {
+  const { width, height } = getPageDimensions(page);
+  node.x = Math.max(0, Math.min(node.x, width - node.w));
+  node.y = Math.max(0, Math.min(node.y, height - node.h));
+}
+
+function getConnectedNodes(nodeId) {
+  const seen = new Set();
+  return getEdges()
+    .flatMap((edge) => {
+      if (edge.from === nodeId) return [edge.to];
+      if (edge.to === nodeId) return [edge.from];
+      return [];
+    })
+    .filter((id) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
+    .map((id) => getNodes().find((node) => node.id === id))
+    .filter(Boolean);
+}
+
+function inferRelationshipAxis(relNode, entities) {
+  if (relNode.layoutAxis) return relNode.layoutAxis;
+  if (entities.length < 2) return "horizontal";
+
+  const [a, b] = entities.map(getNodeCenter);
+  return Math.abs(a.x - b.x) >= Math.abs(a.y - b.y)
+    ? "horizontal"
+    : "vertical";
+}
+
+function recenterRelationship(relNode, entities, axis) {
+  if (entities.length < 2) return;
+
+  const [a, b] = entities.map(getNodeCenter);
+  const midpointX = (a.x + b.x) / 2;
+  const midpointY = (a.y + b.y) / 2;
+
+  if (axis === "horizontal") {
+    setNodeCenter(relNode, midpointX, midpointY);
+  } else {
+    setNodeCenter(relNode, midpointX, midpointY);
+  }
+
+  clampNodeToPage(relNode);
+}
+
+function smartAlignRelationshipGroup(node) {
+  const relatedRelationships =
+    node.type === "rel"
+      ? [node]
+      : getConnectedNodes(node.id).filter((connected) => connected.type === "rel");
+
+  relatedRelationships.forEach((relNode) => {
+    const entities = getConnectedNodes(relNode.id).filter(
+      (connected) => connected.type === "entity",
+    );
+
+    if (entities.length < 2) return;
+
+    const axis = inferRelationshipAxis(relNode, entities);
+    relNode.layoutAxis = axis;
+
+    if (node.type === "entity") {
+      const otherEntity = entities.find((entity) => entity.id !== node.id);
+      if (!otherEntity) return;
+
+      const currentCenter = getNodeCenter(node);
+      const otherCenter = getNodeCenter(otherEntity);
+
+      if (axis === "horizontal") {
+        if (Math.abs(currentCenter.y - otherCenter.y) <= 24) {
+          setNodeCenter(node, currentCenter.x, otherCenter.y);
+        }
+      } else if (Math.abs(currentCenter.x - otherCenter.x) <= 24) {
+        setNodeCenter(node, otherCenter.x, currentCenter.y);
+      }
+
+      clampNodeToPage(node);
+      const [entityA, entityB] = entities;
+      const centerA = getNodeCenter(entityA);
+      const centerB = getNodeCenter(entityB);
+      const relCenter = getNodeCenter(relNode);
+
+      if (axis === "horizontal") {
+        if (Math.abs(centerA.y - centerB.y) <= 24) {
+          recenterRelationship(relNode, entities, axis);
+        } else {
+          setNodeCenter(relNode, (centerA.x + centerB.x) / 2, relCenter.y);
+          clampNodeToPage(relNode);
+        }
+      } else if (Math.abs(centerA.x - centerB.x) <= 24) {
+        recenterRelationship(relNode, entities, axis);
+      } else {
+        setNodeCenter(relNode, relCenter.x, (centerA.y + centerB.y) / 2);
+        clampNodeToPage(relNode);
+      }
+
+      return;
+    }
+
+    if (node.type === "rel") {
+      const [entityA, entityB] = entities;
+      const centerA = getNodeCenter(entityA);
+      const centerB = getNodeCenter(entityB);
+      const relCenter = getNodeCenter(relNode);
+
+      if (axis === "horizontal") {
+        const closeEnough = Math.abs(centerA.y - centerB.y) <= 24;
+        const targetY = closeEnough ? (centerA.y + centerB.y) / 2 : relCenter.y;
+
+        if (Math.abs(relCenter.y - targetY) <= 32 || closeEnough) {
+          setNodeCenter(relNode, (centerA.x + centerB.x) / 2, targetY);
+        } else {
+          setNodeCenter(relNode, (centerA.x + centerB.x) / 2, relCenter.y);
+        }
+      } else {
+        const closeEnough = Math.abs(centerA.x - centerB.x) <= 24;
+        const targetX = closeEnough ? (centerA.x + centerB.x) / 2 : relCenter.x;
+
+        if (Math.abs(relCenter.x - targetX) <= 32 || closeEnough) {
+          setNodeCenter(relNode, targetX, (centerA.y + centerB.y) / 2);
+        } else {
+          setNodeCenter(relNode, relCenter.x, (centerA.y + centerB.y) / 2);
+        }
+      }
+
+      clampNodeToPage(relNode);
+      return;
+    }
+  });
+}
+
+function keepNodesInsidePage() {
+  getNodes().forEach((node) => clampNodeToPage(node));
+}
+
+function syncPageSizeInputs() {
+  const page = getPage();
+  const widthInput = document.getElementById("pageWidthInput");
+  const heightInput = document.getElementById("pageHeightInput");
+
+  if (widthInput) widthInput.value = String(page.width);
+  if (heightInput) heightInput.value = String(page.height);
+}
+
+export function setCurrentPageSize(width, height) {
+  const page = getPage();
+  const nextWidth = clampDimension(
+    width,
+    page.width,
+    PAGE_LIMITS.minWidth,
+    PAGE_LIMITS.maxWidth,
+  );
+  const nextHeight = clampDimension(
+    height,
+    page.height,
+    PAGE_LIMITS.minHeight,
+    PAGE_LIMITS.maxHeight,
+  );
+
+  page.width = nextWidth;
+  page.height = nextHeight;
+
+  keepNodesInsidePage();
+  setViewBox();
+  render();
+}
+
+export function growCurrentPage() {
+  const page = getPage();
+  setCurrentPageSize(page.width * 1.2, page.height * 1.2);
 }
 
 export function setViewBox() {
-  const w = Math.max(600, window.innerWidth - 320);
-  const h = Math.max(600, window.innerHeight - 80);
-  stage.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  const { width, height } = getPageDimensions();
+  stage.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  stage.setAttribute("width", String(width));
+  stage.setAttribute("height", String(height));
+  stage.style.width = `${width}px`;
+  stage.style.height = `${height}px`;
 }
 
 export function escapeHtml(str) {
@@ -67,7 +286,8 @@ export function escapeHtml(str) {
 }
 
 export function addPage() {
-  appState.pages.push({ nodes: [], edges: [] });
+  const currentPage = getPage();
+  appState.pages.push(createPage(currentPage.width, currentPage.height));
   appState.currentPage = appState.pages.length - 1;
   setViewBox();
   render();
@@ -316,6 +536,7 @@ export function render() {
   });
 
   updatePageIndicator();
+  syncPageSizeInputs();
 }
 
 export function handleConnect(id) {
@@ -336,9 +557,32 @@ export function handleConnect(id) {
     }
 
     if (n1.type === "entity" && n2.type === "entity") {
-      const midX = (n1.x + n2.x) / 2;
-      const midY = (n1.y + n2.y) / 2;
-      const rel = addNode("rel", midX, midY, "Has");
+      const c1 = getNodeCenter(n1);
+      const c2 = getNodeCenter(n2);
+      const axis =
+        Math.abs(c1.x - c2.x) >= Math.abs(c1.y - c2.y)
+          ? "horizontal"
+          : "vertical";
+
+      if (axis === "horizontal") {
+        setNodeCenter(n2, c2.x, c1.y);
+      } else {
+        setNodeCenter(n2, c1.x, c2.y);
+      }
+
+      clampNodeToPage(n2);
+
+      const nextCenter1 = getNodeCenter(n1);
+      const nextCenter2 = getNodeCenter(n2);
+      const rel = addNode(
+        "rel",
+        (nextCenter1.x + nextCenter2.x) / 2 - 50,
+        (nextCenter1.y + nextCenter2.y) / 2 - 35,
+        "Has",
+      );
+      rel.layoutAxis = axis;
+      recenterRelationship(rel, [n1, n2], axis);
+
       getEdges().push({
         from: n1.id,
         to: rel.id,
@@ -632,6 +876,8 @@ export function exportData() {
   const payload = {
     pages: appState.pages.map((p, i) => ({
       page: pageLabel(i),
+      width: p.width,
+      height: p.height,
       nodes: p.nodes,
       edges: p.edges,
     })),
@@ -646,11 +892,17 @@ export function bindStageEvents() {
     if (appState.dragNode) {
       appState.dragNode.node.x = e.offsetX - appState.dragNode.ox;
       appState.dragNode.node.y = e.offsetY - appState.dragNode.oy;
+      clampNodeToPage(appState.dragNode.node);
+      smartAlignRelationshipGroup(appState.dragNode.node);
       render();
     }
   };
 
   stage.onmouseup = () => {
+    if (appState.dragNode) {
+      smartAlignRelationshipGroup(appState.dragNode.node);
+      render();
+    }
     setDragNode(null);
   };
 
